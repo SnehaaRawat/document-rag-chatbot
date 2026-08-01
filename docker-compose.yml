@@ -1,0 +1,43 @@
+version: "3.9"
+
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: rag_chatbot
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg2://postgres:postgres@db:5432/rag_chatbot
+      EMBEDDING_PROVIDER: local
+      GENERATION_PROVIDER: ${GENERATION_PROVIDER:-groq}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      GROQ_MODEL: llama-3.3-70b-versatile
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      GENERATION_MODEL: gpt-4o-mini
+      ALLOWED_ORIGINS: http://localhost:3000
+    ports:
+      - "8000:8000"
+    volumes:
+      - uploads:/app/app/uploads
+
+volumes:
+  pgdata:
+  uploads:
