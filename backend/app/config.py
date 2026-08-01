@@ -14,11 +14,21 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+psycopg2://postgres:postgres@localhost:5432/rag_chatbot"
 
     # --- Embeddings ---
-    # "local"  -> sentence-transformers/all-MiniLM-L6-v2, runs on CPU, no API cost, 384 dims
-    # "openai" -> text-embedding-3-small, 1536 dims, needs OPENAI_API_KEY
+    # "local"  -> sentence-transformers/all-MiniLM-L6-v2, runs on CPU, no API cost, 384 dims.
+    #             Loads PyTorch into the process — several hundred MB of baseline memory
+    #             even before encoding anything. Fine on your own machine or a paid
+    #             instance; can exceed memory-constrained free tiers (e.g. Render's
+    #             free 512MB) on its own, independent of document size.
+    # "openai" -> text-embedding-3-small, 1536 dims, needs OPENAI_API_KEY, no local model.
+    # "gemini" -> text-embedding-004, 768 dims, needs GEMINI_API_KEY. Google's free tier
+    #             (1,500 requests/day, no billing method required) makes this the
+    #             recommended default for memory-constrained free-tier deploys — no
+    #             local model means no PyTorch memory footprint at all.
     embedding_provider: str = "local"
     local_embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
     openai_embedding_model: str = "text-embedding-3-small"
+    gemini_api_key: str = ""
+    gemini_embedding_model: str = "models/text-embedding-004"
 
     # --- Generation (the answer-writing LLM) ---
     # "openai" -> requires OPENAI_API_KEY, uses generation_model (e.g. gpt-4o-mini)
@@ -52,7 +62,11 @@ class Settings(BaseSettings):
         # Must match the model in use. If you change embedding_provider
         # after data already exists, you need to re-embed everything —
         # dimensions can't mix in one pgvector column.
-        return 1536 if self.embedding_provider == "openai" else 384
+        if self.embedding_provider == "openai":
+            return 1536
+        if self.embedding_provider == "gemini":
+            return 768
+        return 384
 
     @property
     def generation_configured(self) -> bool:
