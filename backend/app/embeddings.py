@@ -36,14 +36,17 @@ def _embed_batch(texts: list[str]) -> list[list[float]]:
     if settings.embedding_provider == "gemini":
         # google-generativeai is a lightweight REST-based SDK — no PyTorch, no local
         # model weights, so it doesn't carry the memory footprint the local provider does.
-        # embed_content accepts a list of strings directly and embeds them all in ONE
-        # HTTP call (returns a BatchEmbeddingDict) — looping one call per chunk here
-        # would turn a 100-chunk document into 100 sequential round trips, which is
-        # what was making ingestion slow before this fix.
+        # gemini-embedding-001 defaults to 3072-dim output; output_dimensionality must be
+        # set explicitly to match settings.embedding_dim (768), or inserts into the
+        # pgvector column will fail on a dimension mismatch.
         import google.generativeai as genai
 
         genai.configure(api_key=settings.gemini_api_key)
-        result = genai.embed_content(model=settings.gemini_embedding_model, content=texts)
+        result = genai.embed_content(
+            model=settings.gemini_embedding_model,
+            content=texts,
+            output_dimensionality=settings.embedding_dim,
+        )
         return result["embedding"]
 
     model = _get_local_model()
