@@ -20,15 +20,18 @@ class Settings(BaseSettings):
     #             instance; can exceed memory-constrained free tiers (e.g. Render's
     #             free 512MB) on its own, independent of document size.
     # "openai" -> text-embedding-3-small, 1536 dims, needs OPENAI_API_KEY, no local model.
-    # "gemini" -> text-embedding-004, 768 dims, needs GEMINI_API_KEY. Google's free tier
-    #             (1,500 requests/day, no billing method required) makes this the
+    # "gemini" -> gemini-embedding-001, needs GEMINI_API_KEY. Google's free tier
+    #             (rate-limited, no billing method required) makes this the
     #             recommended default for memory-constrained free-tier deploys — no
-    #             local model means no PyTorch memory footprint at all.
+    #             local model means no PyTorch memory footprint at all. Defaults to
+    #             3072-dim output but is explicitly truncated to 768 in embeddings.py
+    #             to match embedding_dim below (Matryoshka representation learning —
+    #             the model supports truncating to 768/1536/256 with little quality loss).
     embedding_provider: str = "local"
     local_embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
     openai_embedding_model: str = "text-embedding-3-small"
     gemini_api_key: str = ""
-    gemini_embedding_model: str = "models/text-embedding-004"
+    gemini_embedding_model: str = "models/gemini-embedding-001"
 
     # --- Generation (the answer-writing LLM) ---
     # "openai" -> requires OPENAI_API_KEY, uses generation_model (e.g. gpt-4o-mini)
